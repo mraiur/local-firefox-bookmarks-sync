@@ -21,15 +21,8 @@ def getConnection():
         print('Database locked')
         return None
 
-connection = getConnection()
-if connection == None:
-    exit()
-
-cursor = connection.cursor()
-
-
-
-folders = {}
+connection = sqlite3.connect(Config.get('App', 'bookmarks_file'), check_same_thread=False)
+connection.row_factory = sqlite3.Row
 
 def rowToDict(row):
     return {
@@ -43,11 +36,13 @@ app = Flask(__name__, template_folder=os.getcwd()+"/src/templates") # static_fol
 
 @app.route('/', methods=['GET'])
 def home():
-    return jsonify(get_local())
-
+    localData = get_local()
+    if localData != None:
+        return jsonify(localData)
+    else:
+        return 'Cannot fetch local data', 400
 def fetch_compare():
     try:
-
         res = requests.get(compare_url)
         if res.status_code == 200:
             return res.json()
@@ -57,21 +52,27 @@ def fetch_compare():
         return None
 
 def get_local():
-    cursor.execute('SELECT * FROM moz_bookmarks')
-    data = cursor.fetchall()
-    dataArray = []
-    for row in data:
-        dataArray.append(rowToDict(row))
-    return dataArray
+    try:
+        cursor = connection.cursor()
+        cursor.execute('SELECT * FROM moz_bookmarks')
+        data = cursor.fetchall()
+        dataArray = []
+        for row in data:
+            dataArray.append(rowToDict(row))
+        return dataArray
+    except sqlite3.OperationalError or sqlite3.DatabaseError:
+        print('Database locked')
+        return None
 
 def activate_job():
     def run_job():
         while True:
             print('run_job')
             remoteData = fetch_compare()
+            localData = get_local()
 
-            if remoteData != None:
-                localData = get_local()
+            if remoteData != None and localData != None:
+                cursor = connection.cursor()
                 jsonDiff = diff(localData, remoteData, marshal=True)
 
                 # first updates
@@ -84,6 +85,7 @@ def activate_job():
                             sqlData = (value, str(currentRowData['id']))
                             cursor.execute(sql, sqlData)
                             connection.commit()
+                        print('Update', currentRowData, jsonDiff[change])
 
                 # then delete
                 if '$delete' in jsonDiff:
@@ -92,6 +94,7 @@ def activate_job():
                         sql = 'DELETE FROM moz_bookmarks WHERE id = ?'
                         cursor.execute(sql, (str(currentRowData['id']), ) )
                         connection.commit()
+                        print('Delete', currentRowData)
 
                 # insert new
                 if '$insert' in jsonDiff:
@@ -102,6 +105,7 @@ def activate_job():
                         sqlData = (data['id'], data['parent'], data['position'], data['title'], data['type'])
                         cursor.execute(sql, sqlData)
                         connection.commit()
+                        print('Add', data)
 
             time.sleep(60)
 
