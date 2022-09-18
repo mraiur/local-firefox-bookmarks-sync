@@ -1,0 +1,7 @@
+venv
+.idea/
+.vscode
+config.ini
+__pycache__
+.~*
+input/upgrade
