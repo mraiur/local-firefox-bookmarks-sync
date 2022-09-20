@@ -7,4 +7,9 @@ py=$cwd/venv/bin/python3
 
 export PYTHONPATH=${PYTHONPATH}
 
-$py src/watch.py
+if [ "$1" == "" ]; then
+  echo "serve - start server that displays bookmarks"
+elif [ "$1" == "serve" ]; then
+  $py src/serve.py $2
+fi
+

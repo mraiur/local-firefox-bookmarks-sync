@@ -2,6 +2,7 @@ venv
 .idea/
 .vscode
 config.ini
+config_second.ini
 __pycache__
 .~*
 input/upgrade
