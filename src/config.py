@@ -14,6 +14,8 @@ Config.read(configFile)
 compare_url = 'http://'+Config.get('App', 'compare_host')+':'+Config.get('App', 'compare_port')+'/'
 update_url = compare_url + 'update'
 
+print('Remote url', compare_url)
+
 AllowDelete = Config.get('App', 'allow_delete') == 'True'
 AllowInsert = Config.get('App', 'allow_insert') == 'True'
 AllowUpdate = Config.get('App', 'allow_update') == 'True'
